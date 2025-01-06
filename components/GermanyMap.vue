@@ -28,19 +28,115 @@ const updateDimensions = () => {
   dimensions.height = window.innerHeight
 }
 
+// Define the city interface
+interface City {
+  name: string;
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
+// Reactive array to store cities
+const cities = ref<City[]>([])
+
 // Variables to hold D3-related objects
 let svg: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null
 let g: d3.Selection<SVGGElement, unknown, null, undefined> | null = null
 let paths: d3.Selection<SVGPathElement, any, SVGGElement, unknown> | null = null
 let projection: d3.GeoProjection | null = null
 let pathGenerator: d3.GeoPath | null = null
+let pinsGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null
+let arcsGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null
+
+
+// Function to add a single pin by city name
+const addPin = (name: string) => {
+  if (!pinsGroup || !projection) return
+  const proj = projection
+
+  // check if the pin already exists to prevent duplicates
+  const existingPin = pinsGroup.selectAll<SVGCircleElement, unknown>('circle')
+      .filter((d: any) => d.name === name)
+
+  if (!existingPin.empty()) {
+    console.warn(`Pin already exists: ${name}`)
+    return
+  }
+
+  // Find the city by name
+  const city = cities.value.find((city) => city.name === name)
+
+  if (!city) {
+    return
+  }
+
+  const [cx, cy] = proj(city.coordinates) || [0, 0]
+
+  // Append a new circle for the pin
+  pinsGroup.append('circle')
+      .datum(city)
+      .attr('cx', cx)
+      .attr('cy', cy)
+      .attr('r', 4) // Radius of the pin
+      .attr('fill', '#B8336A')
+      .attr('cursor', 'pointer')
+}
+
+// Function to add an arc between two cities by their names
+const addArc = (sourceName: string, targetName: string) => {
+  if (!arcsGroup || !projection || !pathGenerator) return
+
+  const arcExists = arcsGroup.selectAll<SVGPathElement, unknown>('path')
+      .filter(function() {
+        const source = d3.select(this).attr('data-source')
+        const target = d3.select(this).attr('data-target')
+        return source === sourceName && target === targetName
+      })
+      .size() > 0
+
+  if (arcExists) {
+    console.warn(`Arc already exists: ${sourceName}-${targetName}`)
+    return
+  }
+
+  // Find source and target cities
+  const source = cities.value.find((city) => city.name === sourceName)
+  const target = cities.value.find((city) => city.name === targetName)
+
+  if (!source) {
+    console.warn(`${sourceName} was not found in the list of cities`)
+    return
+  }
+
+  if (!target) {
+    console.warn(`${targetName} was not found in the list of cities`)
+    return
+  }
+
+
+  const [x1, y1] = projection(source.coordinates) || [0, 0]
+  const [x2, y2] = projection(target.coordinates) || [0, 0]
+
+  // Calculate the midpoint for the control point to create an arc
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const dr = Math.sqrt(dx * dx + dy * dy) * 1.5 // Adjust the multiplier for arc height
+
+  arcsGroup.append('path')
+      .attr('data-source', sourceName)
+      .attr('data-target', targetName)
+      .attr('d', `M${x1},${y1} A${dr},${dr} 0 0,1 ${x2},${y2}`)
+      .attr('fill', 'none')
+      .attr('stroke', '#FF5733')
+      .attr('stroke-width', 2)
+      .attr('stroke-opacity', 0.7)
+}
 
 // Define the resize handler in the outer scope
 const handleResize = debounce(() => {
   updateDimensions()
-  if (!svg || !projection || !pathGenerator || !paths) return
+  if (!svg || !projection || !pathGenerator || !paths || !pinsGroup) return
 
   const { width, height } = dimensions
+  const proj = projection
 
   // Update SVG attributes
   svg
@@ -58,6 +154,12 @@ const handleResize = debounce(() => {
 
   // Update all paths with the new projection
   paths.attr('d', pathGenerator as any)
+
+  // Update pins positions
+  pinsGroup.selectAll('circle')
+      .attr('cx', (d: any) => proj(d.coordinates)![0])
+      .attr('cy', (d: any) => proj(d.coordinates)![1])
+
 }, 100)
 
 onMounted(async () => {
@@ -97,33 +199,38 @@ onMounted(async () => {
         .enter()
         .append('path')
         .attr('d', pathGenerator as any)
-        .attr('fill', '#cccccc')
+        .attr('fill', '#759FBC')
         .attr('stroke', '#333333')
         .attr('stroke-width', 0.1)
-        .on('mouseover', function(event, d: any) {
-          d3.select(this).attr('fill', '#aaaaaa')
 
-          if (tooltip.value) {
-            tooltip.value.style.opacity = '1'
-            tooltip.value.innerHTML = d.properties.name
-            const [x, y] = d3.pointer(event, mapContainer.value)
-            tooltip.value.style.left = `${x + 20}px`
-            tooltip.value.style.top = `${y + 20}px`
-          }
-        })
-        .on('mousemove', function(event) {
-          if (tooltip.value) {
-            const [x, y] = d3.pointer(event, mapContainer.value)
-            tooltip.value.style.left = `${x + 20}px`
-            tooltip.value.style.top = `${y + 20}px`
-          }
-        })
-        .on('mouseout', function() {
-          d3.select(this).attr('fill', '#cccccc')
-          if (tooltip.value) {
-            tooltip.value.style.opacity = '0'
-          }
-        })
+    // Extract cities from TopoJSON
+    if (topoData.objects.places) {
+      const citiesGeo = feature(topoData, topoData.objects.places) as any
+      cities.value = citiesGeo.features.map((feature: any) => ({
+        name: feature.properties.name,
+        coordinates: feature.geometry.coordinates
+      }))
+    } else {
+      console.warn('No cities object found in TopoJSON.')
+    }
+
+    // Create a group for pins
+    pinsGroup = svg.append('g').attr('class', 'pins')
+
+    // Add pins
+    addPin('Duisburg')
+    addPin('Berlin')
+    addPin('München')
+    addPin('Oldenburg')
+
+    // Create a group for arcs
+    arcsGroup = svg.append('g').attr('class', 'arcs')
+
+    // Add arcs
+    addArc('Berlin', 'Duisburg')
+    addArc('München', 'Duisburg')
+    addArc('München', 'Oldenburg')
+
 
     // Add zoom behavior
     svg.call(
@@ -132,6 +239,9 @@ onMounted(async () => {
             .on('zoom', (event) => {
               if (g) {
                 g.attr('transform', event.transform)
+              }
+              if (pinsGroup) {
+                pinsGroup.attr('transform', event.transform)
               }
             })
     )
@@ -172,7 +282,8 @@ svg {
   pointer-events: none;
   color: #fff;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, left 0.3s, top 0.3s;
   white-space: nowrap;
+  z-index: 10;
 }
 </style>
