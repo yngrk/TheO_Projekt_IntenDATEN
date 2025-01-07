@@ -133,7 +133,7 @@ const addArc = (sourceName: string, targetName: string) => {
 // Define the resize handler in the outer scope
 const handleResize = debounce(() => {
   updateDimensions()
-  if (!svg || !projection || !pathGenerator || !paths || !pinsGroup) return
+  if (!svg || !projection || !pathGenerator || !paths) return
 
   const { width, height } = dimensions
   const proj = projection
@@ -156,10 +156,12 @@ const handleResize = debounce(() => {
   paths.attr('d', pathGenerator as any)
 
   // Update pins positions
+  if (!pinsGroup) return
   pinsGroup.selectAll('circle')
       .attr('cx', (d: any) => proj(d.coordinates)![0])
       .attr('cy', (d: any) => proj(d.coordinates)![1])
 
+  // Update arc positions
 }, 100)
 
 onMounted(async () => {
@@ -182,8 +184,8 @@ onMounted(async () => {
 
   // Define projection and path generator
   projection = d3.geoMercator()
-      .center([10.5, 51]) // Center on Germany [longitude, latitude]
-      .scale(3000) // Adjust the scale as needed
+      .center([10.5, 50]) // Center on Germany [longitude, latitude]
+      .scale(2000) // Adjust the scale as needed
       .translate([width / 2, height / 2])
 
   pathGenerator = d3.geoPath().projection(projection)
@@ -242,6 +244,9 @@ onMounted(async () => {
               }
               if (pinsGroup) {
                 pinsGroup.attr('transform', event.transform)
+              }
+              if (arcsGroup) {
+                arcsGroup.attr('transform', event.transform)
               }
             })
     )
