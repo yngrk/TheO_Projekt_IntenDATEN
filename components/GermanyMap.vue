@@ -162,6 +162,32 @@ const handleResize = debounce(() => {
       .attr('cy', (d: any) => proj(d.coordinates)![1])
 
   // Update arc positions
+  if (!arcsGroup || !projection) return
+  arcsGroup.selectAll<SVGPathElement, unknown>('path')
+      .attr('d', function(this: SVGPathElement): string {
+        const sourceName: string = d3.select(this).attr('data-source')
+        const targetName: string = d3.select(this).attr('data-target')
+
+        // Find the corresponding cities
+        const source = cities.value.find((c) => c.name === sourceName)
+        const target = cities.value.find((c) => c.name === targetName)
+
+        if (!source || !target) {
+          console.warn(`Cannot find cities: ${sourceName} or ${targetName}`)
+          return ''
+        }
+
+        // Project the coordinates
+        const [x1, y1] = proj(source.coordinates) || [0, 0]
+        const [x2, y2] = proj(target.coordinates) || [0, 0]
+
+        // Calculate the radius for the arc
+        const dx = x2 - x1
+        const dy = y2 - y1
+        const dr = Math.sqrt(dx * dx + dy * dy) * 1.5
+
+        return `M${x1},${y1} A${dr},${dr} 0 0,1 ${x2},${y2}`
+      })
 }, 100)
 
 onMounted(async () => {
