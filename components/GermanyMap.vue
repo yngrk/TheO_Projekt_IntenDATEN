@@ -224,6 +224,7 @@ onMounted(async () => {
     addPin('Berlin')
     addPin('München')
     addPin('Oldenburg')
+    addPin('Hannover')
 
     // Create a group for arcs
     arcsGroup = svg.append('g').attr('class', 'arcs')
