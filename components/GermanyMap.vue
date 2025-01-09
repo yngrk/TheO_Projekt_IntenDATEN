@@ -11,6 +11,20 @@ import * as d3 from 'd3'
 import type { Topology } from "topojson-specification"
 import { feature } from 'topojson-client'
 
+interface Path {
+  from: string
+  to: string
+}
+interface Props {
+  pins: string[],
+  arcs: Path[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  pins: () => [],
+  arcs: () => []
+})
+
 // Define refs for DOM elements
 const mapContainer = ref<HTMLElement | null>(null)
 const tooltip = ref<HTMLElement | null>(null)
@@ -46,6 +60,25 @@ let pathGenerator: d3.GeoPath | null = null
 let pinsGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null
 let arcsGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null
 
+const ARC_OFFSET = 2; // Offset in pixels
+// Calculates a new point offset from the original target point towards the source.
+const calculateAdjustedPoint = (
+    source: [number, number],
+    target: [number, number],
+    offset: number
+): [number, number] => {
+  const dx = target[0] - source[0];
+  const dy = target[1] - source[1];
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  if (distance === 0) return target; // Avoid division by zero
+
+  const ratio = offset / distance;
+  const adjustedX = target[0] - dx * ratio;
+  const adjustedY = target[1] - dy * ratio;
+
+  return [adjustedX, adjustedY];
+};
 
 // Function to add a single pin by city name
 const addPin = (name: string) => {
@@ -115,19 +148,23 @@ const addArc = (sourceName: string, targetName: string) => {
   const [x1, y1] = projection(source.coordinates) || [0, 0]
   const [x2, y2] = projection(target.coordinates) || [0, 0]
 
-  // Calculate the midpoint for the control point to create an arc
-  const dx = x2 - x1
-  const dy = y2 - y1
-  const dr = Math.sqrt(dx * dx + dy * dy) * 1.5 // Adjust the multiplier for arc height
+  // Calculate the adjusted end point
+  const [adjX2, adjY2] = calculateAdjustedPoint([x1, y1], [x2, y2], ARC_OFFSET);
+
+  // Calculate the radius for the arc
+  const dx = adjX2 - x1;
+  const dy = adjY2 - y1;
+  const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // Adjust the multiplier for arc height
 
   arcsGroup.append('path')
       .attr('data-source', sourceName)
       .attr('data-target', targetName)
-      .attr('d', `M${x1},${y1} A${dr},${dr} 0 0,1 ${x2},${y2}`)
+      .attr('d', `M${x1},${y1} A${dr},${dr} 0 0,1 ${adjX2},${adjY2}`)
       .attr('fill', 'none')
       .attr('stroke', '#FF5733')
-      .attr('stroke-width', 2)
+      .attr('stroke-width', 1)
       .attr('stroke-opacity', 0.7)
+      .attr('marker-end', 'url(#arrowhead)') // Attach the arrow marker
 }
 
 // Define the resize handler in the outer scope
@@ -181,12 +218,15 @@ const handleResize = debounce(() => {
         const [x1, y1] = proj(source.coordinates) || [0, 0]
         const [x2, y2] = proj(target.coordinates) || [0, 0]
 
-        // Calculate the radius for the arc
-        const dx = x2 - x1
-        const dy = y2 - y1
-        const dr = Math.sqrt(dx * dx + dy * dy) * 1.5
+        // Calculate the adjusted end point
+        const [adjX2, adjY2] = calculateAdjustedPoint([x1, y1], [x2, y2], ARC_OFFSET);
 
-        return `M${x1},${y1} A${dr},${dr} 0 0,1 ${x2},${y2}`
+        // Calculate the radius for the arc
+        const dx = adjX2 - x1;
+        const dy = adjY2 - y1;
+        const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // Adjust the multiplier for arc height
+
+        return `M${x1},${y1} A${dr},${dr} 0 0,1 ${adjX2},${adjY2}`;
       })
 }, 100)
 
@@ -207,6 +247,21 @@ onMounted(async () => {
       .attr('height', height)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .attr('preserveAspectRatio', 'xMidYMid meet')
+
+  // Append <defs> to SVG and define the arrow marker
+  svg.append('defs').append('marker')
+      .attr('id', 'arrowhead')
+      .attr('viewBox', '-0 -5 10 10') // Adjust viewBox as needed
+      .attr('refX', 8) // Adjust refX to position the arrow correctly
+      .attr('refY', 0)
+      .attr('orient', 'auto')
+      .attr('markerWidth', 4)
+      .attr('markerHeight', 4)
+      .attr('xoverflow', 'visible')
+      .append('svg:path')
+      .attr('d', 'M 0,-5 L 10,0 L 0,5') // Arrow shape
+      .attr('fill', '#FF5733') // Match the arc color or choose another
+      .style('stroke','none');
 
   // Define projection and path generator
   projection = d3.geoMercator()
@@ -246,18 +301,13 @@ onMounted(async () => {
     pinsGroup = svg.append('g').attr('class', 'pins')
 
     // Add pins
-    addPin('Duisburg')
-    addPin('Berlin')
-    addPin('München')
-    addPin('Oldenburg')
+    props.pins.forEach((p) => addPin(p))
 
     // Create a group for arcs
     arcsGroup = svg.append('g').attr('class', 'arcs')
 
     // Add arcs
-    addArc('Berlin', 'Duisburg')
-    addArc('München', 'Duisburg')
-    addArc('München', 'Oldenburg')
+    props.arcs.forEach((a) => addArc(a.from, a.to))
 
 
     // Add zoom behavior
