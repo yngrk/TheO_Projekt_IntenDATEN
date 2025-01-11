@@ -90,7 +90,6 @@ const addPin = (name: string) => {
       .filter((d: any) => d.name === name)
 
   if (!existingPin.empty()) {
-    console.warn(`Pin already exists: ${name}`)
     return
   }
 
@@ -98,6 +97,7 @@ const addPin = (name: string) => {
   const city = cities.value.find((city) => city.name === name)
 
   if (!city) {
+    console.warn('city not found:', name)
     return
   }
 
