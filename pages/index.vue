@@ -9,7 +9,11 @@ const mapDefaults = {
 }
 
 onMounted(async () => {
-  const res = await axios.get('/api/all-data')
+  const res = await axios.get('/api/theatres', {
+    params: {
+      type: 'state'
+    }
+  })
   console.log(res.data)
 })
 
