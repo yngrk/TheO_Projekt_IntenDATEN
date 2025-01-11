@@ -335,6 +335,20 @@ onMounted(async () => {
   }
 })
 
+// Watch for changes in props.pins and add new pins
+watch(() => props.pins, (newPins) => {
+  if (pinsGroup && projection) {
+    newPins.forEach((p) => addPin(p))
+  }
+}, { immediate: true }) // immediate ensures that the watcher runs initially
+
+// Watch for changes in props.arcs and add new arcs
+watch(() => props.arcs, (newArcs) => {
+  if (arcsGroup && projection && pathGenerator) {
+    newArcs.forEach((a) => addArc(a.from, a.to))
+  }
+}, { immediate: true })
+
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
