@@ -31,8 +31,11 @@ ENV NODE_ENV=production
 # Copy the built output
 COPY --from=build /src/.output /src/.output
 
-# **Copy the data files**
+# **Copy the server data files**
 COPY --from=build /src/server/data /src/server/data
+
+# **Copy the public directory**
+COPY --from=build /src/public /src/public
 
 # Optional: Copy node_modules if necessary
 # COPY --from=build /src/node_modules /src/node_modules
