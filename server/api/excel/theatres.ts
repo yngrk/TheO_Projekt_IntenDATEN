@@ -1,10 +1,11 @@
-import dataService from "~/server/services/dataService";
+import excelDataService from "~/server/services/excelDataService";
+import {ErrorResponse, SuccessResponse} from "~/server/types";
 export default defineEventHandler(async (event): Promise<SuccessResponse | ErrorResponse> => {
     try {
         const query = getQuery(event);
         const typeParam = query.type as string | undefined;
 
-        let data = await dataService.getData();
+        let data = await excelDataService.getData();
 
         switch (typeParam) {
             case 'city':

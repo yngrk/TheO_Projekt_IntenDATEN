@@ -1,12 +1,9 @@
 import path from "node:path"
 import { promises as fs } from 'fs'
 import Exceljs from "exceljs";
+import {DataItem} from "~/server/types";
 
-interface DataItem {
-    [key: string]: any
-}
-
-class DataService {
+class ExcelDataService {
     private data: DataItem[] | null = null
     private filePath: string
     private lastModified: Date | null = null
@@ -73,5 +70,5 @@ class DataService {
     }
 }
 
-const dataService = new DataService('server/data/src/Tabelle_IntenDATEN_2025.xlsx');
+const dataService = new ExcelDataService('server/data/src/Tabelle_IntenDATEN_2025.xlsx');
 export default dataService;

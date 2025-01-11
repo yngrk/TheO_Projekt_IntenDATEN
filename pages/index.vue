@@ -1,26 +1,24 @@
 <script setup lang="ts">
 import axios from "axios";
+import type {TheatreItem} from "~/types";
 
-const mapDefaults = {
-  pins: ['Düsseldorf', 'München'],
-  arcs: [
-    {from: "Düsseldorf", to: "München"}
-  ]
-}
+const pins = ref<string[]>([])
+const arcs = ref<{from: string, to: string}[]>([])
 
 onMounted(async () => {
-  const res = await axios.get('/api/theatres', {
+  const res = await axios.get('/api/excel/theatres', {
     params: {
-      type: 'state'
+      type: ''
     }
   })
-  console.log(res.data)
+  const {success, data} = res.data
+  pins.value = data.map((i: TheatreItem) => i.city)
 })
 
 </script>
 
 <template>
-  <div class="flex justify-center">
-    <GermanyMap :pins="mapDefaults.pins" :arcs="mapDefaults.arcs"></GermanyMap>
+  <div>
+      <GermanyMap :pins="pins" :arcs="arcs"></GermanyMap>
   </div>
 </template>

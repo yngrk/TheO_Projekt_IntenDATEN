@@ -88556,6 +88556,45 @@
         {
           "type": "Point",
           "coordinates": [
+            14449,
+            16017
+          ],
+          "properties": {
+            "name": "Weimar",
+            "nameEN": null,
+            "state": "Thüringen"
+          },
+          "id": "Weimar"
+        },
+        {
+          "type": "Point",
+          "coordinates": [
+            12054,
+            14265
+          ],
+          "properties": {
+            "name": "Meiningen",
+            "nameEN": null,
+            "state": "Thüringen"
+          },
+          "id": "Meiningen"
+        },
+        {
+          "type": "Point",
+          "coordinates": [
+            6373,
+            11711
+          ],
+          "properties": {
+            "name": "Darmstadt",
+            "nameEN": null,
+            "state": "Hessen"
+          },
+          "id": "Darmstadt"
+        },
+        {
+          "type": "Point",
+          "coordinates": [
             6373,
             11711
           ],

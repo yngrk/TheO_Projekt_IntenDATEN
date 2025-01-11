@@ -1,19 +1,8 @@
-import dataService from "~/server/services/dataService";
-
-interface SuccessResponse {
-    success: true;
-    data: any[];
-}
-
-interface ErrorResponse {
-    success: false;
-    message: string;
-    error: string;
-}
+import excelDataService from "~/server/services/excelDataService";
 
 export default defineEventHandler(async (event): Promise<SuccessResponse | ErrorResponse> => {
     try {
-        const data = await dataService.getData();
+        const data = await excelDataService.getData();
         return {
             success: true,
             data
