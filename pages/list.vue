@@ -212,7 +212,7 @@ const fetchPlaces = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col max-h-[100dvh]">
+  <div class="flex flex-col">
     <div class="flex px-3 py-3.5 border-b border-gray-200 dark:border-gray-700 w-full">
       <UInput v-model="q" placeholder="Suche..." class="w-full" />
     </div>
@@ -225,8 +225,10 @@ const fetchPlaces = async () => {
             class="pb-24"
     />
 
+    <!-- MODALS SECTION -->
     <div>
-      <div class="absolute bottom-10 right-10 flex gap-2">
+      <!-- ADD BUTTON -->
+      <div class="bottom-10 right-10 flex gap-2 fixed">
         <transition name="fade">
           <UButton
               v-if="showDelBtn"
